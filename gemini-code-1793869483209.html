@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharatTransitOS // Dual Portal: Public Commuter 3D & UMTA Admin 2D</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    :root, [data-theme="light"] {
+      --bg-canvas: #F2F4F8;
+      --bg-gradient: radial-gradient(circle at 50% 30%, #FFFFFF 0%, #E6ECF5 65%, #DCE4F0 100%);
+      --glass-surface: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(246, 249, 253, 0.78) 100%);
+      --glass-pill: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(244, 247, 252, 0.84) 100%);
+      --glass-outer-border: rgba(15, 23, 42, 0.09);
+      --glass-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.10), 0 4px 16px -2px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+      --well-bg: rgba(15, 23, 42, 0.04);
+      --well-bg-hover: rgba(15, 23, 42, 0.075);
+      --well-border: rgba(15, 23, 42, 0.07);
+      --text-primary: #1D1D1F;
+      --text-secondary: #515154;
+      --text-muted: #86868B;
+      --seg-track: rgba(15, 23, 42, 0.07);
+      --spring-snappy: cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-canvas: #070A14;
+      --bg-gradient: radial-gradient(circle at 50% 32%, rgba(22, 38, 76, 0.55) 0%, #070A14 78%);
+      --glass-surface: linear-gradient(135deg, rgba(26, 32, 50, 0.82) 0%, rgba(14, 18, 30, 0.72) 100%);
+      --glass-pill: linear-gradient(180deg, rgba(34, 41, 64, 0.86) 0%, rgba(18, 22, 36, 0.76) 100%);
+      --glass-outer-border: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 28px 68px -12px rgba(0, 0, 0, 0.68), inset 0 1px 0 0 rgba(255, 255, 255, 0.20);
+      --well-bg: rgba(255, 255, 255, 0.05);
+      --well-bg-hover: rgba(255, 255, 255, 0.09);
+      --well-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #F5F5F7;
+      --text-secondary: #A1A1A6;
+      --text-muted: #6E6E73;
+      --seg-track: rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      background-color: var(--bg-canvas);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+      color: var(--text-primary);
+    }
+
+    .font-sf-display { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif; letter-spacing: -0.024em; }
+    .font-sf-mono { font-family: "SF Mono", ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+
+    .liquid-glass {
+      background: var(--glass-surface);
+      backdrop-filter: blur(40px) saturate(190%);
+      -webkit-backdrop-filter: blur(40px) saturate(190%);
+      border: 1px solid var(--glass-outer-border);
+      box-shadow: var(--glass-shadow);
+    }
+    .liquid-glass-pill {
+      background: var(--glass-pill);
+      backdrop-filter: blur(44px) saturate(200%);
+      -webkit-backdrop-filter: blur(44px) saturate(200%);
+      border: 1px solid var(--glass-outer-border);
+      box-shadow: var(--glass-shadow);
+    }
+    .liquid-well {
+      background: var(--well-bg);
+      border: 1px solid var(--well-border);
+      transition: all 0.25s ease;
+    }
+    .liquid-well:hover { background: var(--well-bg-hover); }
+
+    .t-primary { color: var(--text-primary); }
+    .t-secondary { color: var(--text-secondary); }
+    .t-muted { color: var(--text-muted); }
+
+    .apple-btn { transition: transform 0.24s var(--spring-snappy), opacity 0.2s ease; }
+    .apple-btn:hover { transform: scale(1.02); }
+    .apple-btn:active { transform: scale(0.97); }
+
+    input[type=range].apple-slider {
+      -webkit-appearance: none; width: 100%; height: 6px; border-radius: 999px;
+      background: var(--seg-track); outline: none;
+    }
+    input[type=range].apple-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: #007AFF; cursor: pointer; border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .ios-switch {
+      position: relative; width: 38px; height: 20px; background: var(--seg-track);
+      border-radius: 999px; transition: background-color 0.3s ease; cursor: pointer; flex-shrink: 0;
+    }
+    .ios-switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+      background: #FFFFFF; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+      transition: transform 0.3s var(--spring-snappy);
+    }
+    input:checked + .ios-switch { background: #34C759; }
+    input:checked + .ios-switch.sw-purple { background: #AF52DE; }
+    input:checked + .ios-switch.sw-blue { background: #007AFF; }
+    input:checked + .ios-switch::after { transform: translateX(18px); }
+
+    /* Floating 3D Anchored Callout Labels */
+    .station-3d-label {
+      position: absolute; top: 0; left: 0; transform: translate(-50%, -100%);
+      pointer-events: auto; cursor: pointer; z-index: 15;
+    }
+    .label-inner {
+      background: var(--glass-pill); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-outer-border); box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+      padding: 4px 10px; border-radius: 999px; display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; transition: transform 0.25s ease;
+    }
+    .station-3d-label:hover .label-inner { transform: scale(1.07) translateY(-2px); }
+    .station-3d-label.selected .label-inner {
+      border-color: #007AFF; box-shadow: 0 0 0 2px rgba(0,122,255,0.3);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(134, 134, 139, 0.3); border-radius: 999px; }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+  <!-- Background Studio Gradient -->
+  <div class="pointer-events-none absolute inset-0 z-0" style="background: var(--bg-gradient);"></div>
+
+  <!-- =====================================================================
+       0. ROLE GATEWAY & AUTHENTICATION OVERLAY
+       ===================================================================== -->
+  <div id="auth-gateway" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-2xl transition-opacity duration-300">
+    <div class="liquid-glass rounded-[32px] w-full max-w-3xl p-6 md:p-8 flex flex-col gap-6">
+      
+      <!-- Top Brand Header -->
+      <div class="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF9500] via-[#007AFF] to-[#34C759] flex items-center justify-center shadow-lg">
+            <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h1 class="font-sf-display text-xl font-bold t-primary">BharatTransitOS // Dual Mobility Portal</h1>
+            <p class="text-xs t-muted">Unified Metropolitan Transport Authority (UMTA) & Public Commuter Twin</p>
+          </div>
+        </div>
+        <span class="px-3 py-1 rounded-full text-[11px] font-semibold bg-[#34C759]/15 text-[#34C759] border border-[#34C759]/30">
+          Live Sync Active
+        </span>
+      </div>
+
+      <!-- Two Portal Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        <!-- 1. PUBLIC COMMUTER PORTAL (NO PASSWORD) -->
+        <div class="liquid-well rounded-[24px] p-5 flex flex-col justify-between border border-[#007AFF]/25">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#007AFF]/15 text-[#007AFF]">
+                Open Public Access
+              </span>
+              <i data-lucide="users" class="w-5 h-5 text-[#007AFF]"></i>
+            </div>
+            <h2 class="font-sf-display text-lg font-bold t-primary">Citizen Commuter Portal</h2>
+            <p class="text-xs t-secondary leading-relaxed">
+              Interactive <strong>3D City Crowd Map</strong> &amp; Smart Route Predictor. Check live station rush, festival road-blocks, monsoon alerts, and find the best time to travel without getting crushed.
+            </p>
+            <ul class="text-[11px] t-muted space-y-1 pt-1">
+              <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#34C759]"></i> Interactive 3D Station Crowd Visualizer</li>
+              <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#34C759]"></i> Origin-to-Destination Wait &amp; Comfort Finder</li>
+              <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#34C759]"></i> Live Share-Auto &amp; E-Rickshaw Stand Status</li>
+            </ul>
+          </div>
+
+          <button id="btn-enter-commuter" class="apple-btn mt-6 w-full py-3 rounded-2xl bg-[#007AFF] text-white font-sf-display font-semibold text-xs shadow-[0_8px_20px_rgba(0,122,255,0.35)] flex items-center justify-center gap-2">
+            <span>Enter Public Commuter Portal (No Login)</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- 2. UMTA AGENCY ADMIN PORTAL (PASSWORD PROTECTED, 2D DATA ONLY) -->
+        <div class="liquid-well rounded-[24px] p-5 flex flex-col justify-between border border-[#FF9500]/30">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FF9500]/15 text-[#FF9500]">
+                Restricted Agency Console
+              </span>
+              <i data-lucide="shield-lock" class="w-5 h-5 text-[#FF9500]"></i>
+            </div>
+            <h2 class="font-sf-display text-lg font-bold t-primary">UMTA Admin Control Room</h2>
+            <p class="text-xs t-secondary leading-relaxed">
+              Fast, <strong>2D Data-First Operations Console</strong> (no 3D overhead). Simulate weather/policies, schedule festivals, and dispatch e-Buses &amp; Auto feeders across all city stations.
+            </p>
+
+            <!-- Credentials Inputs -->
+            <div class="space-y-2 pt-1">
+              <div>
+                <label class="text-[10px] font-bold uppercase t-muted block mb-1">Agency Controller ID</label>
+                <input id="admin-id-input" type="text" value="UMTA_ADMIN" placeholder="UMTA_ADMIN" class="w-full px-3 py-2 rounded-xl liquid-glass font-sf-mono text-xs t-primary focus:outline-none">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold uppercase t-muted block mb-1">Security Passkey</label>
+                <input id="admin-pass-input" type="password" value="BHARAT2026" placeholder="••••••••••" class="w-full px-3 py-2 rounded-xl liquid-glass font-sf-mono text-xs t-primary focus:outline-none">
+              </div>
+              <div class="flex items-center justify-between text-[10px] font-sf-mono t-muted pt-0.5">
+                <span>Demo ID: <strong class="t-primary">UMTA_ADMIN</strong></span>
+                <span>Passkey: <strong class="t-primary">BHARAT2026</strong></span>
+              </div>
+              <div id="admin-auth-error" class="hidden text-[11px] font-semibold text-[#FF3B30] pt-1">
+                Invalid Agency ID or Passkey. Use UMTA_ADMIN / BHARAT2026.
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-enter-admin" class="apple-btn mt-4 w-full py-3 rounded-2xl bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-sf-display font-semibold text-xs shadow-lg flex items-center justify-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4 text-[#FF9500]"></i>
+            <span>Unlock 2D Admin Console</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SHARED TOP NAVIGATION BAR (SWITCH PORTALS ANYTIME)
+       ===================================================================== -->
+  <header class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 w-[96%] max-w-7xl pointer-events-auto">
+    <div class="liquid-glass-pill rounded-full px-3.5 py-1.5 flex items-center justify-between gap-2">
+      
+      <!-- Brand + Active Mode Badge -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF9500] via-[#007AFF] to-[#34C759] flex items-center justify-center shadow-md">
+          <i data-lucide="compass" class="w-4 h-4 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-sf-display font-bold text-sm t-primary">BharatTransitOS</span>
+            <span id="portal-mode-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#007AFF]/15 text-[#007AFF]">
+              Public Commuter 3D View
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Live City Advisory Ticker -->
+      <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full liquid-well text-xs">
+        <span class="w-2 h-2 rounded-full bg-[#34C759] animate-ping" id="ticker-dot"></span>
+        <span id="global-live-ticker" class="font-medium t-secondary truncate max-w-md">
+          18:00 IST • Monsoon Alert Active • Ganesh Visarjan Procession at Majestic Jn
+        </span>
+      </div>
+
+      <!-- Right Controls: Theme & Portal Switcher -->
+      <div class="flex items-center gap-1.5">
+        <button id="btn-theme-toggle" class="apple-btn px-3 py-1.5 rounded-full text-xs font-semibold liquid-well t-primary flex items-center gap-1.5">
+          <i data-lucide="sun" class="w-3.5 h-3.5 text-[#FF9500]" id="theme-icon"></i>
+          <span id="theme-label" class="hidden sm:inline">Daylight</span>
+        </button>
+
+        <button id="btn-switch-portal" class="apple-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] flex items-center gap-1.5">
+          <i data-lucide="repeat" class="w-3.5 h-3.5 text-[#FF9500]"></i>
+          <span id="switch-portal-label">Switch Portal / Login</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       VIEW 1: PUBLIC COMMUTER PORTAL (3D VISUAL MAP + TRIP PREDICTOR ONLY)
+       ===================================================================== -->
+  <div id="commuter-portal-view" class="relative w-full h-full">
+    
+    <!-- 3D Three.js Viewport (Only visible for Commuters) -->
+    <div id="canvas-container" class="absolute inset-0 z-0 cursor-grab active:cursor-grabbing"></div>
+    <div id="labels-3d-container" class="pointer-events-none absolute inset-0 z-10 overflow-hidden"></div>
+
+    <!-- LEFT BLADE: COMMUTER TRIP & CROWD PREDICTOR -->
+    <aside class="absolute left-4 top-20 bottom-20 w-80 md:w-[355px] z-20 pointer-events-auto flex flex-col">
+      <div class="liquid-glass rounded-[28px] p-4 flex-1 flex flex-col gap-3 overflow-y-auto">
+        
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-[#007AFF]">Public Commuter Companion</span>
+          <h2 class="font-sf-display text-base font-bold t-primary">Smart Trip &amp; Crowd Predictor</h2>
+          <p class="text-[11px] t-muted">Check predicted station rush before leaving home</p>
+        </div>
+
+        <!-- Origin & Destination Selector -->
+        <div class="liquid-well rounded-2xl p-3 space-y-2.5">
+          <div>
+            <label class="text-[10px] font-bold uppercase t-muted block mb-1">Boarding Station (From)</label>
+            <select id="commuter-from-select" class="w-full px-3 py-1.5 rounded-xl liquid-glass text-xs font-semibold t-primary bg-transparent focus:outline-none"></select>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold uppercase t-muted block mb-1">Alighting Station (To)</label>
+            <select id="commuter-to-select" class="w-full px-3 py-1.5 rounded-xl liquid-glass text-xs font-semibold t-primary bg-transparent focus:outline-none"></select>
+          </div>
+
+          <!-- Planned Travel Time Slider -->
+          <div class="pt-1">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-semibold t-secondary flex items-center gap-1">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-[#007AFF]"></i> Planned Travel Time
+              </span>
+              <span id="commuter-time-badge" class="font-sf-mono text-xs font-bold text-[#007AFF]">18:00 IST</span>
+            </div>
+            <input id="commuter-time-slider" type="range" min="0" max="23" value="18" step="1" class="apple-slider">
+            <div class="flex justify-between text-[9px] font-sf-mono t-muted mt-1">
+              <span>06:00 AM</span>
+              <span>12:00 PM</span>
+              <span>06:00 PM</span>
+              <span>11:00 PM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PREDICTED TRIP VERDICT CARD -->
+        <div id="commuter-trip-verdict" class="liquid-well rounded-2xl p-3.5 border border-[#FF3B30]/35 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider t-muted">Predicted Comfort Level</span>
+            <span id="verdict-crowd-pill" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF3B30]/15 text-[#FF3B30]">
+              Heavy Rush • Standing Only
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pt-1">
+            <div class="p-2 rounded-xl liquid-glass text-center">
+              <div class="text-[9px] t-muted">Est. Wait</div>
+              <div id="verdict-wait" class="font-sf-mono text-sm font-bold text-[#FF3B30] mt-0.5">14 min</div>
+            </div>
+            <div class="p-2 rounded-xl liquid-glass text-center">
+              <div class="text-[9px] t-muted">Journey Time</div>
+              <div id="verdict-duration" class="font-sf-mono text-sm font-bold t-primary mt-0.5">28 min</div>
+            </div>
+            <div class="p-2 rounded-xl liquid-glass text-center">
+              <div class="text-[9px] t-muted">Est. Fare</div>
+              <div id="verdict-fare" class="font-sf-mono text-sm font-bold text-[#34C759] mt-0.5">₹35</div>
+            </div>
+          </div>
+
+          <!-- Smart Best-Time Suggestion -->
+          <div class="p-2.5 rounded-xl bg-[#007AFF]/10 border border-[#007AFF]/20 flex items-start gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4 text-[#007AFF] shrink-0 mt-0.5"></i>
+            <div class="text-[11px] t-secondary leading-snug" id="verdict-smart-tip">
+              <strong>Smart Tip:</strong> Travelling at <strong>16:00 IST</strong> instead cuts your wait to <strong>4 mins</strong> with seats available.
+            </div>
+          </div>
+        </div>
+
+        <!-- UPCOMING CITY FESTIVALS & ALERTS FOR COMMUTERS -->
+        <div class="space-y-1.5 mt-auto">
+          <span class="text-[10px] font-bold uppercase tracking-wider t-muted px-1">Scheduled City Event Alerts</span>
+          <div id="commuter-events-feed" class="space-y-1.5 max-h-36 overflow-y-auto pr-1"></div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- RIGHT BLADE: SELECTED STATION LIVE GUIDE FOR COMMUTERS -->
+    <aside class="absolute right-4 top-20 bottom-20 w-80 md:w-[345px] z-20 pointer-events-auto flex flex-col">
+      <div class="liquid-glass rounded-[28px] p-4 flex-1 flex flex-col justify-between overflow-y-auto">
+        
+        <div class="space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span id="pub-stn-mode" class="text-[10px] font-bold uppercase tracking-wider text-[#007AFF]">Metro + Feeder Hub</span>
+              <h3 id="pub-stn-name" class="font-sf-display text-base font-bold t-primary mt-0.5">Majestic Intermodal Terminus</h3>
+            </div>
+            <span id="pub-stn-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF3B30]/15 text-[#FF3B30]">
+              High Crowd
+            </span>
+          </div>
+
+          <!-- Station Live Passenger Info -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="liquid-well rounded-2xl p-2.5">
+              <div class="text-[10px] t-muted">Next Train / Bus In</div>
+              <div id="pub-next-arrival" class="font-sf-mono text-sm font-bold text-[#007AFF] mt-0.5">4.0 mins</div>
+              <div id="pub-active-vehicles" class="text-[9px] t-muted">14 e-Buses on route</div>
+            </div>
+            <div class="liquid-well rounded-2xl p-2.5">
+              <div class="text-[10px] t-muted">Prepaid Auto / E-Rickshaw</div>
+              <div id="pub-auto-status" class="font-sf-mono text-sm font-bold text-[#34C759] mt-0.5">82% Available</div>
+              <div class="text-[9px] t-muted">2 min walk to Gate B</div>
+            </div>
+          </div>
+
+          <!-- 24h Crowd Forecast Chart for Commuters -->
+          <div class="liquid-well rounded-2xl p-3 space-y-1.5">
+            <div class="flex items-center justify-between text-[10px]">
+              <span class="font-semibold t-secondary">Today's Hourly Crowd Forecast</span>
+              <span class="text-[#007AFF] font-sf-mono">Tap bar below to scrub</span>
+            </div>
+            <svg id="commuter-sparkline-svg" viewBox="0 0 260 56" class="w-full h-14 overflow-visible"></svg>
+          </div>
+
+          <!-- Commuter Advisory -->
+          <div class="p-3 rounded-2xl liquid-well space-y-1">
+            <div class="text-[10px] font-bold uppercase t-muted flex items-center gap-1">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-[#007AFF]"></i> Passenger Advisory
+            </div>
+            <p id="pub-stn-advisory" class="text-xs t-secondary leading-relaxed">
+              Expect heavy boarding queues at Platform 2. Women passengers can avail free travel on non-AC BMTC buses under Shakti Scheme.
+            </p>
+          </div>
+        </div>
+
+        <!-- Quick Station Switcher Pills -->
+        <div class="pt-3 border-t border-black/10 dark:border-white/10">
+          <div class="text-[10px] font-semibold t-muted mb-1.5">Tap Station to Inspect on 3D Map:</div>
+          <div id="commuter-station-pills" class="grid grid-cols-3 gap-1.5"></div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- BOTTOM 3D CAMERA & HOUR BAR FOR COMMUTERS -->
+    <footer class="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-3xl pointer-events-auto">
+      <div class="liquid-glass-pill rounded-full px-4 py-2 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5">
+          <button data-cam="iso" class="cam-preset-btn apple-btn px-3 py-1 rounded-full text-[11px] font-semibold bg-[#007AFF] text-white">3D Isometric</button>
+          <button data-cam="top" class="cam-preset-btn apple-btn px-3 py-1 rounded-full text-[11px] font-medium liquid-well t-secondary">Top Radar</button>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-sf-mono t-secondary">
+          <span>Drag to rotate 3D city • Scroll to zoom</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- =====================================================================
+       VIEW 2: UMTA AGENCY ADMIN CONSOLE (PURE 2D DATA & SIMULATION — NO 3D)
+       ===================================================================== -->
+  <div id="admin-portal-view" class="hidden relative w-full h-full pt-16 pb-4 px-4 z-20 overflow-y-auto">
+    <div class="max-w-7xl mx-auto h-full flex flex-col gap-3">
+
+      <!-- TOP 2D ADMIN KPI SUMMARY STRIP -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+        <div class="liquid-glass rounded-2xl p-3">
+          <div class="text-[10px] font-bold uppercase t-muted">System Hourly Load</div>
+          <div id="adm-kpi-demand" class="font-sf-mono text-xl font-bold t-primary mt-0.5">22,450 pax/hr</div>
+          <div id="adm-kpi-surge" class="text-[10px] font-sf-mono text-[#FF3B30] font-semibold">+74% vs Base</div>
+        </div>
+        <div class="liquid-glass rounded-2xl p-3">
+          <div class="text-[10px] font-bold uppercase t-muted">Crush Load Hubs (&gt;145%)</div>
+          <div id="adm-kpi-sdcl" class="font-sf-mono text-xl font-bold text-[#FF3B30] mt-0.5">3 / 6 Hubs</div>
+          <div id="adm-kpi-detours" class="text-[10px] font-sf-mono text-[#34C759]">Flyover Detours Active</div>
+        </div>
+        <div class="liquid-glass rounded-2xl p-3">
+          <div class="text-[10px] font-bold uppercase t-muted">Active e-Bus Fleet</div>
+          <div id="adm-kpi-fleet" class="font-sf-mono text-xl font-bold text-[#007AFF] mt-0.5">71 Coaches</div>
+          <div id="adm-kpi-cap" class="text-[10px] font-sf-mono t-muted">Cap: 8,520 pax/hr</div>
+        </div>
+        <div class="liquid-glass rounded-2xl p-3">
+          <div class="text-[10px] font-bold uppercase t-muted">Depot Battery SoC</div>
+          <div id="adm-kpi-soc" class="font-sf-mono text-xl font-bold text-[#34C759] mt-0.5">76% Avg</div>
+          <div id="adm-kpi-grid" class="text-[10px] font-sf-mono t-muted">BESCOM Load: Nominal</div>
+        </div>
+        <div class="liquid-glass rounded-2xl p-3 flex flex-col justify-between">
+          <div class="text-[10px] font-bold uppercase text-[#007AFF]">Autonomous UMTA AI</div>
+          <button id="btn-admin-rebalance" class="apple-btn w-full py-2 rounded-xl bg-gradient-to-r from-[#FF9500] via-[#007AFF] to-[#34C759] text-white font-semibold text-xs shadow-md flex items-center justify-center gap-1.5">
+            <i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i>
+            <span>Auto-Rebalance All</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN 2D ADMIN WORKSPACE: 3-COLUMN ANALYTICAL GRID -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+        
+        <!-- COLUMN 1 (3 COLS): SCENARIO, WEATHER & POLICY SIMULATOR -->
+        <div class="lg:col-span-3 liquid-glass rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-[#FF9500]">Simulation Input</span>
+              <h3 class="font-sf-display text-sm font-bold t-primary">City Context &amp; Policies</h3>
+            </div>
+            <button id="btn-admin-reset" class="text-[11px] font-semibold text-[#007AFF] hover:underline">Reset</button>
+          </div>
+
+          <!-- Simulation Hour Slider -->
+          <div class="liquid-well rounded-xl p-2.5 space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="t-secondary">Simulation Hour</span>
+              <span id="adm-hour-label" class="font-sf-mono text-[#007AFF]">18:00 IST</span>
+            </div>
+            <input id="adm-time-slider" type="range" min="0" max="23" value="18" step="1" class="apple-slider">
+          </div>
+
+          <!-- Quick Indian Scenario Presets -->
+          <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase t-muted">One-Click Stress Presets</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button data-preset="silkboard" class="adm-preset-btn apple-btn p-2 rounded-xl liquid-well text-left text-[11px] font-semibold t-primary">
+                🚦 Silk Board Peak
+              </button>
+              <button data-preset="monsoon" class="adm-preset-btn apple-btn p-2 rounded-xl liquid-well text-left text-[11px] font-semibold t-primary">
+                🌧️ Monsoon Flood
+              </button>
+              <button data-preset="festival" class="adm-preset-btn apple-btn p-2 rounded-xl liquid-well text-left text-[11px] font-semibold t-primary">
+                🪔 Diwali Mela
+              </button>
+              <button data-preset="heatwave" class="adm-preset-btn apple-btn p-2 rounded-xl liquid-well text-left text-[11px] font-semibold t-primary">
+                🔥 44°C Heatwave
+              </button>
+            </div>
+          </div>
+
+          <!-- Weather Selector -->
+          <div class="space-y-1">
+            <label class="text-[10px] font-bold uppercase t-muted">Meteorological Condition</label>
+            <select id="adm-weather-select" class="w-full px-3 py-2 rounded-xl liquid-well text-xs font-semibold t-primary bg-transparent focus:outline-none">
+              <option value="clear">☀️ Clear Weather (Nominal)</option>
+              <option value="heatwave">🔥 44°C Loo Heatwave (1.6x EV AC Drain)</option>
+              <option value="monsoon" selected>🌧️ Monsoon Deluge (Underpass Flood +52%)</option>
+            </select>
+          </div>
+
+          <!-- Mixed-Traffic Lane Encroachment -->
+          <div class="liquid-well rounded-xl p-2.5 space-y-1">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="t-secondary">Road Encroachment</span>
+              <span id="adm-encroach-label" class="font-sf-mono text-[#FF9500]">45%</span>
+            </div>
+            <input id="adm-encroach-slider" type="range" min="0" max="80" value="45" step="5" class="apple-slider">
+            <p class="text-[10px] t-muted">Hawkers &amp; auto infiltration in bus bays</p>
+          </div>
+
+          <!-- Policy Switches -->
+          <div class="space-y-2">
+            <label class="liquid-well rounded-xl p-2.5 flex items-center justify-between cursor-pointer">
+              <div>
+                <div class="text-xs font-semibold t-primary">Shakti Free Bus Scheme</div>
+                <div class="text-[10px] t-muted">+38% municipal bus ridership</div>
+              </div>
+              <input id="adm-shakti-toggle" type="checkbox" checked class="sr-only">
+              <div class="ios-switch sw-purple"></div>
+            </label>
+
+            <label class="liquid-well rounded-xl p-2.5 flex items-center justify-between cursor-pointer">
+              <div>
+                <div class="text-xs font-semibold t-primary">UMTA Multi-Agency Sync</div>
+                <div class="text-[10px] t-muted">Syncs Metro arrivals with feeders</div>
+              </div>
+              <input id="adm-umta-toggle" type="checkbox" checked class="sr-only">
+              <div class="ios-switch sw-blue"></div>
+            </label>
+
+            <label class="liquid-well rounded-xl p-2.5 flex items-center justify-between cursor-pointer">
+              <div>
+                <div class="text-xs font-semibold t-primary">Flyover Crush Detours</div>
+                <div class="text-[10px] t-muted">Auto-diverts when load &gt; 145%</div>
+              </div>
+              <input id="adm-reroute-toggle" type="checkbox" checked class="sr-only">
+              <div class="ios-switch"></div>
+            </label>
+          </div>
+
+          <!-- Export GTFS CSV -->
+          <div class="mt-auto pt-2 flex gap-2">
+            <button id="btn-adm-export-csv" class="apple-btn flex-1 py-2 rounded-xl liquid-well text-xs font-semibold t-primary flex items-center justify-center gap-1.5">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-[#007AFF]"></i> Export GTFS .CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUMN 2 (6 COLS): 2D STATION FLEET DISPATCH & TELEMETRY MATRIX TABLE -->
+        <div class="lg:col-span-6 liquid-glass rounded-[24px] p-4 flex flex-col gap-3 overflow-hidden">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-[#007AFF]">2D Operations Matrix (No 3D Overhead)</span>
+              <h3 class="font-sf-display text-sm font-bold t-primary">Station Capacity, Crush Load &amp; Live Dispatch Table</h3>
+            </div>
+            <span id="adm-rebalance-toast" class="hidden px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#34C759]/20 text-[#34C759]">
+              ✓ Fleet Rebalanced
+            </span>
+          </div>
+
+          <!-- 2D Data Table -->
+          <div class="flex-1 overflow-auto rounded-xl border border-black/10 dark:border-white/10">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-black/10 dark:border-white/10 text-[10px] font-bold uppercase t-muted liquid-well">
+                  <th class="py-2.5 px-3">Transit Hub</th>
+                  <th class="py-2.5 px-2">Pred. Load</th>
+                  <th class="py-2.5 px-2">Crush Strain</th>
+                  <th class="py-2.5 px-2">Est. Wait</th>
+                  <th class="py-2.5 px-2">e-Bus Dispatch</th>
+                  <th class="py-2.5 px-2">Auto IPT / SoC</th>
+                </tr>
+              </thead>
+              <tbody id="admin-stations-table-body" class="divide-y divide-black/5 dark:divide-white/5 text-xs">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Corridor Status Strip -->
+          <div class="liquid-well rounded-xl p-3 space-y-1.5">
+            <div class="text-[10px] font-bold uppercase t-muted">Corridor Infrastructure &amp; Underpass Status</div>
+            <div id="admin-corridor-strip" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]"></div>
+          </div>
+        </div>
+
+        <!-- COLUMN 3 (3 COLS): FESTIVAL & EVENT SURGE SCHEDULER -->
+        <div class="lg:col-span-3 liquid-glass rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#AF52DE]">Predictive Event Engine</span>
+            <h3 class="font-sf-display text-sm font-bold t-primary">Festival &amp; Procession Scheduler</h3>
+          </div>
+
+          <!-- Add Event Form -->
+          <div class="liquid-well rounded-xl p-3 space-y-2">
+            <input id="adm-ev-name" type="text" placeholder="Event (e.g. Karaga / IPL Match)" class="w-full px-2.5 py-1.5 rounded-lg liquid-glass text-xs t-primary focus:outline-none">
+            <select id="adm-ev-station" class="w-full px-2.5 py-1.5 rounded-lg liquid-glass text-xs t-primary bg-transparent focus:outline-none"></select>
+            <div class="grid grid-cols-2 gap-1.5">
+              <div>
+                <label class="text-[9px] t-muted block">Start Hr (0-23)</label>
+                <input id="adm-ev-start" type="number" min="0" max="23" value="16" class="w-full px-2 py-1 rounded-lg liquid-glass font-sf-mono text-xs t-primary">
+              </div>
+              <div>
+                <label class="text-[9px] t-muted block">End Hr (0-23)</label>
+                <input id="adm-ev-end" type="number" min="0" max="23" value="20" class="w-full px-2 py-1 rounded-lg liquid-glass font-sf-mono text-xs t-primary">
+              </div>
+            </div>
+            <select id="adm-ev-surge" class="w-full px-2.5 py-1.5 rounded-lg liquid-glass text-xs t-primary bg-transparent focus:outline-none">
+              <option value="1.45">+45% Local Gathering</option>
+              <option value="1.80" selected>+80% Major Festival / Match</option>
+              <option value="2.20">+120% Mega Visarjan Procession</option>
+            </select>
+            <label class="flex items-center gap-2 text-[11px] t-primary cursor-pointer">
+              <input id="adm-ev-block" type="checkbox" class="rounded">
+              <span>Procession Blocks Surface Roads</span>
+            </label>
+            <button id="btn-adm-add-event" class="apple-btn w-full py-2 rounded-xl bg-[#AF52DE] text-white font-semibold text-xs shadow-sm">
+              + Schedule Event Surge
+            </button>
+          </div>
+
+          <!-- Scheduled Events List -->
+          <div class="text-[10px] font-bold uppercase t-muted">Scheduled Events Timeline</div>
+          <div id="admin-events-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SHARED SIMULATION ENGINE & DUAL PORTAL LOGIC
+       ===================================================================== -->
+  <script>
+    // --- 1. SHARED INDIAN TRANSIT DATA ---
+    const DEFAULT_TRANSIT_DATA = {
+      stations: [
+        { id: "STN_01", shortName: "Majestic Jn", name: "Majestic Central Intermodal Terminus", mode: "rail", x: -6, z: -3, baseDemand: 1480, busesAssigned: 14, iptSync: 82, batterySoC: 84, lowLying: false, advisory: "Interchange for Purple & Green Metro Lines. Use Gate B for prepaid auto-rickshaws." },
+        { id: "STN_02", shortName: "Silk Board", name: "Silk Board IT Corridor Flyover Hub", mode: "brt", x: 14, z: -11, baseDemand: 1320, busesAssigned: 11, iptSync: 64, batterySoC: 76, lowLying: true, advisory: "Heavy IT corridor traffic. Elevated Metro station open; low-lying bus bay prone to waterlogging." },
+        { id: "STN_03", shortName: "CyberCity", name: "Whitefield / CyberCity Tech Park", mode: "rail", x: -16, z: 12, baseDemand: 1180, busesAssigned: 12, iptSync: 88, batterySoC: 80, lowLying: false, advisory: "Direct e-rickshaw shuttle loop to ITPL Gates 1–4 every 4 minutes." },
+        { id: "STN_04", shortName: "Chandni Bazaar", name: "Old City Chandni Chowk Bazaar Hub", mode: "micro", x: 6, z: 9, baseDemand: 1050, busesAssigned: 10, iptSync: 92, batterySoC: 86, lowLying: true, advisory: "Pedestrian & E-Rickshaw priority zone during bazaar hours." },
+        { id: "STN_05", shortName: "Chinnaswamy", name: "Chinnaswamy Stadium & Grounds", mode: "lrt", x: 19, z: 15, baseDemand: 860, busesAssigned: 13, iptSync: 78, batterySoC: 75, lowLying: false, advisory: "Special match-day express shuttles operate directly to Majestic Jn." },
+        { id: "STN_06", shortName: "Andheri Sub", name: "Andheri West Suburban & Metro Hub", mode: "lrt", x: -20, z: -14, baseDemand: 1150, busesAssigned: 11, iptSync: 74, batterySoC: 88, lowLying: true, advisory: "High peak transfer volume between Suburban Local trains and BEST feeder buses." }
+      ],
+      corridors: [
+        { from: "STN_01", to: "STN_02", line: "express", mode: "rail", baseFlow: 1120, lowLyingUnderpass: false },
+        { from: "STN_01", to: "STN_06", line: "arena", mode: "lrt", baseFlow: 980, lowLyingUnderpass: true },
+        { from: "STN_01", to: "STN_03", line: "express", mode: "rail", baseFlow: 1040, lowLyingUnderpass: false },
+        { from: "STN_03", to: "STN_04", line: "tech", mode: "brt", baseFlow: 680, lowLyingUnderpass: true },
+        { from: "STN_01", to: "STN_04", line: "micro", mode: "micro", baseFlow: 840, lowLyingUnderpass: false },
+        { from: "STN_04", to: "STN_05", line: "arena", mode: "lrt", baseFlow: 1180, lowLyingUnderpass: false },
+        { from: "STN_02", to: "STN_05", line: "tech", mode: "brt", baseFlow: 790, lowLyingUnderpass: true }
+      ],
+      scheduledEvents: [
+        { id: "EV_1", name: "Diwali Bazaar Shopping Mela", stationId: "STN_04", startHour: 13, endHour: 16, surgeMult: 1.75, blockRoad: true },
+        { id: "EV_2", name: "Ganesh Visarjan Procession", stationId: "STN_01", startHour: 17, endHour: 20, surgeMult: 1.85, blockRoad: true },
+        { id: "EV_3", name: "IPL T20 Night Finale", stationId: "STN_05", startHour: 21, endHour: 23, surgeMult: 2.15, blockRoad: false }
+      ]
+    };
+
+    let transitData = JSON.parse(JSON.stringify(DEFAULT_TRANSIT_DATA));
+
+    const simState = {
+      activePortal: "commuter", // "commuter" (3D) or "admin" (2D)
+      theme: "light",
+      hour: 18,
+      weather: "monsoon",
+      shaktiSubsidy: true,
+      umtaSync: true,
+      dynamicReroute: true,
+      laneEncroachment: 45,
+      selectedStationId: "STN_01",
+      commuterFromId: "STN_01",
+      commuterToId: "STN_02"
+    };
+
+    const HOURLY_CURVE = [
+      0.28, 0.22, 0.20, 0.24, 0.38, 0.68,
+      1.10, 1.55, 1.92, 1.85, 1.35, 1.18,
+      1.22, 1.28, 1.35, 1.48, 1.72, 1.96,
+      2.05, 1.82, 1.45, 1.12, 0.78, 0.45
+    ];
+
+    // --- 2. ROLE AUTHENTICATION & PORTAL SWITCHING ---
+    const authGateway = document.getElementById('auth-gateway');
+    const commuterView = document.getElementById('commuter-portal-view');
+    const adminView = document.getElementById('admin-portal-view');
+    const portalBadge = document.getElementById('portal-mode-badge');
+
+    function enterPortal(mode) {
+      simState.activePortal = mode;
+      authGateway.classList.add('opacity-0', 'pointer-events-none');
+
+      if (mode === 'commuter') {
+        commuterView.classList.remove('hidden');
+        adminView.classList.add('hidden');
+        portalBadge.innerText = "Public Commuter 3D View";
+        portalBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#007AFF]/15 text-[#007AFF]";
+      } else {
+        commuterView.classList.add('hidden');
+        adminView.classList.remove('hidden');
+        portalBadge.innerText = "UMTA Admin 2D Console (Authenticated)";
+        portalBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF9500]/15 text-[#FF9500]";
+      }
+      calculateSimulation();
+    }
+
+    // Commuter Button (No Credentials Required)
+    document.getElementById('btn-enter-commuter').addEventListener('click', () => {
+      enterPortal('commuter');
+    });
+
+    // Admin Login Button (Checks ID: UMTA_ADMIN, Passkey: BHARAT2026)
+    document.getElementById('btn-enter-admin').addEventListener('click', () => {
+      const idVal = document.getElementById('admin-id-input').value.trim();
+      const passVal = document.getElementById('admin-pass-input').value.trim();
+      const errEl = document.getElementById('admin-auth-error');
+
+      if (idVal === "UMTA_ADMIN" && passVal === "BHARAT2026") {
+        errEl.classList.add('hidden');
+        enterPortal('admin');
+      } else {
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-switch-portal').addEventListener('click', () => {
+      authGateway.classList.remove('opacity-0', 'pointer-events-none');
+    });
+
+    // --- 3. THREE.JS 3D ENGINE (FOR PUBLIC COMMUTER PORTAL ONLY) ---
+    const container = document.getElementById('canvas-container');
+    const labelsContainer = document.getElementById('labels-3d-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0xE8EEF7, 0.0085);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.75);
+    scene.add(ambientLight);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
+    keyLight.position.set(45, 90, 45);
+    scene.add(keyLight);
+
+    const COLOR_COBALT  = new THREE.Color(0x007AFF);
+    const COLOR_EMERALD = new THREE.Color(0x34C759);
+    const COLOR_AMBER   = new THREE.Color(0xFF9500);
+    const COLOR_CORAL   = new THREE.Color(0xFF3B30);
+    const COLOR_PURPLE  = new THREE.Color(0xAF52DE);
+
+    let isDragging = false, prevMouseX = 0, prevMouseY = 0;
+    const camSpherical = { radius: 68, phi: Math.PI / 3.2, theta: Math.PI / 4 };
+    const targetSpherical = { radius: 68, phi: Math.PI / 3.2, theta: Math.PI / 4 };
+    const lookTarget = new THREE.Vector3(0, 0, 0);
+    const desiredLookTarget = new THREE.Vector3(0, 0, 0);
+
+    container.addEventListener('mousedown', (e) => { isDragging = true; prevMouseX = e.clientX; prevMouseY = e.clientY; });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging && simState.activePortal === 'commuter') {
+        targetSpherical.theta -= (e.clientX - prevMouseX) * 0.0055;
+        targetSpherical.phi = Math.max(0.2, Math.min(Math.PI / 2.2, targetSpherical.phi - (e.clientY - prevMouseY) * 0.0055));
+        prevMouseX = e.clientX; prevMouseY = e.clientY;
+      }
+    });
+    container.addEventListener('wheel', (e) => {
+      targetSpherical.radius = Math.max(28, Math.min(120, targetSpherical.radius + e.deltaY * 0.04));
+      e.preventDefault();
+    }, { passive: false });
+
+    // Ground & City Grid
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0xE9EEF6, roughness: 0.85, transparent: true, opacity: 0.85 });
+    const groundDisc = new THREE.Mesh(new THREE.CircleGeometry(72, 64), groundMat);
+    groundDisc.rotation.x = -Math.PI / 2;
+    scene.add(groundDisc);
+
+    const gridHelper = new THREE.GridHelper(120, 60, 0x94A3B8, 0xCBD5E1);
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.45;
+    scene.add(gridHelper);
+
+    const stationPillarsGroup = new THREE.Group();
+    const arcGroup = new THREE.Group();
+    const particleGroup = new THREE.Group();
+    scene.add(stationPillarsGroup, arcGroup, particleGroup);
+
+    const stationMeshes = [];
+    const arcCurves = [];
+    const activeParticles = [];
+
+    function build3DScene() {
+      while (stationPillarsGroup.children.length > 0) stationPillarsGroup.remove(stationPillarsGroup.children[0]);
+      while (arcGroup.children.length > 0) arcGroup.remove(arcGroup.children[0]);
+      while (particleGroup.children.length > 0) particleGroup.remove(particleGroup.children[0]);
+      labelsContainer.innerHTML = '';
+      stationMeshes.length = 0;
+      arcCurves.length = 0;
+      activeParticles.length = 0;
+
+      transitData.stations.forEach(stn => {
+        const holder = new THREE.Group();
+        holder.position.set(stn.x, 0, stn.z);
+
+        const outerGeom = new THREE.CylinderGeometry(1.35, 1.55, 1, 24);
+        outerGeom.translate(0, 0.5, 0);
+        const outerMat = new THREE.MeshPhysicalMaterial({
+          color: COLOR_COBALT, transparent: true, opacity: 0.85, roughness: 0.15, emissive: COLOR_COBALT, emissiveIntensity: 0.3
+        });
+        const outerMesh = new THREE.Mesh(outerGeom, outerMat);
+        holder.add(outerMesh);
+
+        const coreGeom = new THREE.CylinderGeometry(0.45, 0.45, 1, 16);
+        coreGeom.translate(0, 0.5, 0);
+        const coreMesh = new THREE.Mesh(coreGeom, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        holder.add(coreMesh);
+
+        const groundRing = new THREE.Mesh(
+          new THREE.RingGeometry(2.0, 2.5, 32),
+          new THREE.MeshBasicMaterial({ color: COLOR_COBALT, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+        );
+        groundRing.rotation.x = Math.PI / 2;
+        groundRing.position.y = 0.05;
+        holder.add(groundRing);
+
+        stationPillarsGroup.add(holder);
+
+        const labelEl = document.createElement('div');
+        labelEl.className = 'station-3d-label';
+        labelEl.innerHTML = `
+          <div class="label-inner">
+            <span class="w-2 h-2 rounded-full lbl-dot bg-[#007AFF]"></span>
+            <span class="font-sf-display font-bold text-[11px] t-primary">${stn.shortName}</span>
+            <span class="font-sf-mono text-[10px] t-secondary lbl-wait">4m</span>
+          </div>
+        `;
+        labelEl.addEventListener('click', () => {
+          simState.selectedStationId = stn.id;
+          desiredLookTarget.set(stn.x, 2, stn.z);
+          calculateSimulation();
+        });
+        labelsContainer.appendChild(labelEl);
+
+        stationMeshes.push({
+          holder, outerMesh, coreMesh, groundRing, labelEl, stn,
+          currentHeight: 4, targetHeight: 8, currentColor: COLOR_COBALT.clone(), targetColor: COLOR_COBALT.clone()
+        });
+      });
+
+      transitData.corridors.forEach(corridor => {
+        const sA = transitData.stations.find(s => s.id === corridor.from);
+        const sB = transitData.stations.find(s => s.id === corridor.to);
+        if (!sA || !sB) return;
+
+        const startVec = new THREE.Vector3(sA.x, 0.6, sA.z);
+        const endVec = new THREE.Vector3(sB.x, 0.6, sB.z);
+        const midVec = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5);
+        midVec.y = 5 + startVec.distanceTo(endVec) * 0.35;
+
+        const curve = new THREE.QuadraticBezierCurve3(startVec, midVec, endVec);
+        const arcMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 32, 0.16, 8, false),
+          new THREE.MeshBasicMaterial({ color: COLOR_COBALT, transparent: true, opacity: 0.55 })
+        );
+        arcGroup.add(arcMesh);
+        arcCurves.push({ curve, corridor, arcMesh });
+
+        const pGeom = new THREE.SphereGeometry(0.35, 10, 10);
+        for (let i = 0; i < 3; i++) {
+          const pMesh = new THREE.Mesh(pGeom, new THREE.MeshBasicMaterial({ color: 0x007AFF }));
+          particleGroup.add(pMesh);
+          activeParticles.push({ mesh: pMesh, curve, corridor, progress: i / 3, speed: 0.0035 });
+        }
+      });
+
+      populateDropdowns();
+    }
+
+    // --- 4. SHARED MATHEMATICAL FORECASTING ENGINE ---
+    function getScheduledEventsForHour(h) {
+      return (transitData.scheduledEvents || []).filter(ev =>
+        ev.startHour <= ev.endHour ? (h >= ev.startHour && h <= ev.endHour) : (h >= ev.startHour || h <= ev.endHour)
+      );
+    }
+
+    function getGlobalMultiplierForHour(h) {
+      const timeFactor = HOURLY_CURVE[h] || 1.0;
+      const weatherMult = simState.weather === "monsoon" ? 1.52 : (simState.weather === "heatwave" ? 1.18 : 1.0);
+      const shaktiMult = simState.shaktiSubsidy ? 1.24 : 1.0;
+      return timeFactor * weatherMult * shaktiMult;
+    }
+
+    function calculateSimulation() {
+      const globalMultiplier = getGlobalMultiplierForHour(simState.hour);
+      const activeEventsNow = getScheduledEventsForHour(simState.hour);
+
+      let totalDemand = 0, totalCapacity = 0, crushHubs = 0, totalBuses = 0, totalSoC = 0;
+
+      stationMeshes.forEach(item => {
+        const { stn, labelEl } = item;
+        const roadPenalty = (stn.mode === 'brt' || stn.mode === 'micro') ? (1 - simState.laneEncroachment * 0.004) : 1.0;
+        stn.capacity = Math.round(stn.busesAssigned * 120 * roadPenalty);
+
+        let localMult = globalMultiplier;
+        if (simState.weather === "monsoon" && stn.lowLying) localMult *= 1.30;
+
+        let hasEvent = false;
+        activeEventsNow.forEach(ev => {
+          if (ev.stationId === stn.id) { localMult *= ev.surgeMult; hasEvent = true; }
+        });
+
+        let predicted = Math.round(stn.baseDemand * localMult);
+        if (!simState.umtaSync) predicted = Math.round(predicted * 1.18);
+        if (simState.dynamicReroute && predicted / stn.capacity >= 1.45) predicted = Math.round(predicted * 0.86);
+
+        const strain = predicted / Math.max(1, stn.capacity);
+        stn.currentPredictedDemand = predicted;
+        stn.strainRatio = strain;
+
+        const heatDrain = simState.weather === "heatwave" ? 18 : 6;
+        stn.currentSoC = Math.max(15, Math.min(100, Math.round(stn.batterySoC - (stn.busesAssigned - 10) * 1.6 - heatDrain)));
+
+        const dwellPenaltyMin = strain >= 1.35 ? (strain - 1.0) * 1.8 : 0.3;
+        stn.waitMins = Math.max(2.0, (strain * 6.8) + dwellPenaltyMin + (simState.laneEncroachment * 0.05)).toFixed(1);
+
+        totalDemand += predicted;
+        totalCapacity += stn.capacity;
+        totalBuses += stn.busesAssigned;
+        totalSoC += stn.currentSoC;
+
+        let targetCol = COLOR_COBALT;
+        let dotClass = "bg-[#007AFF]";
+        if (strain >= 1.45) {
+          stn.status = "critical"; targetCol = COLOR_CORAL; dotClass = "bg-[#FF3B30]"; crushHubs++;
+        } else if (hasEvent) {
+          stn.status = "event"; targetCol = COLOR_PURPLE; dotClass = "bg-[#AF52DE]";
+        } else if (strain >= 1.05) {
+          stn.status = "warning"; targetCol = COLOR_AMBER; dotClass = "bg-[#FF9500]";
+        } else {
+          stn.status = "normal"; targetCol = COLOR_EMERALD; dotClass = "bg-[#34C759]";
+        }
+
+        item.targetHeight = Math.max(2.2, predicted * 0.0085);
+        item.targetColor.copy(targetCol);
+
+        if (labelEl) {
+          labelEl.classList.toggle('selected', stn.id === simState.selectedStationId);
+          labelEl.querySelector('.lbl-dot').className = `w-2 h-2 rounded-full lbl-dot ${dotClass}`;
+          labelEl.querySelector('.lbl-wait').innerText = `${stn.waitMins}m wait`;
+        }
+      });
+
+      // Update Global Header Ticker
+      const evText = activeEventsNow.length > 0 ? ` • Live Event: ${activeEventsNow[0].name}` : '';
+      const weatherText = simState.weather === 'monsoon' ? 'Monsoon Waterlogging Alert' : (simState.weather === 'heatwave' ? '44°C Heatwave Advisory' : 'Clear Weather');
+      document.getElementById('global-live-ticker').innerText = `${simState.hour < 10 ? '0'+simState.hour : simState.hour}:00 IST • ${weatherText}${evText}`;
+
+      // Sync Both Views
+      updateCommuterPortalUI();
+      updateAdminPortalUI(totalDemand, totalCapacity, crushHubs, totalBuses, Math.round(totalSoC / transitData.stations.length), globalMultiplier);
+    }
+
+    // --- 5. UPDATE PUBLIC COMMUTER PORTAL UI ---
+    function updateCommuterPortalUI() {
+      document.getElementById('commuter-time-slider').value = simState.hour;
+      document.getElementById('commuter-time-badge').innerText = `${simState.hour < 10 ? '0'+simState.hour : simState.hour}:00 IST`;
+
+      // Route Predictor Calculation
+      const fromStn = transitData.stations.find(s => s.id === simState.commuterFromId) || transitData.stations[0];
+      const toStn = transitData.stations.find(s => s.id === simState.commuterToId) || transitData.stations[1];
+
+      const maxStrain = Math.max(fromStn.strainRatio || 1, toStn.strainRatio || 1);
+      const waitTime = fromStn.waitMins || "5.0";
+      const dist = Math.hypot(fromStn.x - toStn.x, fromStn.z - toStn.z);
+      const travelMins = Math.round(12 + dist * 0.65 + (simState.laneEncroachment * 0.12));
+      const baseFare = (fromStn.mode === 'brt' && simState.shaktiSubsidy) ? "₹0 (Shakti) / ₹25" : `₹${Math.round(15 + dist * 0.8)}`;
+
+      document.getElementById('verdict-wait').innerText = `${waitTime}m`;
+      document.getElementById('verdict-duration').innerText = `${travelMins} min`;
+      document.getElementById('verdict-fare').innerText = baseFare;
+
+      const pill = document.getElementById('verdict-crowd-pill');
+      const card = document.getElementById('commuter-trip-verdict');
+      if (maxStrain >= 1.45) {
+        pill.innerText = "Super Dense Crush Load • Avoid if possible";
+        pill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF3B30]/15 text-[#FF3B30]";
+        card.className = "liquid-well rounded-2xl p-3.5 border border-[#FF3B30]/40 space-y-2.5";
+      } else if (maxStrain >= 1.05) {
+        pill.innerText = "Moderate Rush • Standing Only";
+        pill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF9500]/15 text-[#FF9500]";
+        card.className = "liquid-well rounded-2xl p-3.5 border border-[#FF9500]/40 space-y-2.5";
+      } else {
+        pill.innerText = "Comfortable • Seats Available";
+        pill.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#34C759]/15 text-[#34C759]";
+        card.className = "liquid-well rounded-2xl p-3.5 border border-[#34C759]/40 space-y-2.5";
+      }
+
+      // Find best low-crowd hour nearby
+      let bestHour = (simState.hour + 2) % 24;
+      let bestMult = 999;
+      [-2, -1, 1, 2].forEach(offset => {
+        const h = (simState.hour + offset + 24) % 24;
+        const m = getGlobalMultiplierForHour(h);
+        if (m < bestMult) { bestMult = m; bestHour = h; }
+      });
+      document.getElementById('verdict-smart-tip').innerHTML = maxStrain >= 1.15
+        ? `<strong>Smart Tip:</strong> Travelling at <strong>${bestHour < 10 ? '0'+bestHour : bestHour}:00 IST</strong> cuts your wait time by ~50% with comfortable standing room.`
+        : `<strong>Good Time to Travel:</strong> Crowd levels on this corridor are currently smooth.`;
+
+      // Selected Station Right Panel
+      const selStn = transitData.stations.find(s => s.id === simState.selectedStationId) || transitData.stations[0];
+      document.getElementById('pub-stn-name').innerText = selStn.name;
+      document.getElementById('pub-next-arrival').innerText = `${selStn.waitMins} mins`;
+      document.getElementById('pub-active-vehicles').innerText = `${selStn.busesAssigned} e-Buses assigned by UMTA`;
+      document.getElementById('pub-auto-status').innerText = `${selStn.iptSync}% Available`;
+      document.getElementById('pub-stn-advisory').innerText = selStn.advisory;
+
+      const stnBadge = document.getElementById('pub-stn-badge');
+      if (selStn.status === 'critical') {
+        stnBadge.innerText = "Severe Rush";
+        stnBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF3B30]/15 text-[#FF3B30]";
+      } else if (selStn.status === 'warning' || selStn.status === 'event') {
+        stnBadge.innerText = "Busy Queue";
+        stnBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF9500]/15 text-[#FF9500]";
+      } else {
+        stnBadge.innerText = "Smooth Flow";
+        stnBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#34C759]/15 text-[#34C759]";
+      }
+
+      // Render Commuter Sparkline
+      const svg = document.getElementById('commuter-sparkline-svg');
+      const W = 260, H = 56;
+      const pts = [];
+      for (let h = 0; h < 24; h++) {
+        const m = getGlobalMultiplierForHour(h);
+        const x = (h / 23) * W;
+        const y = H - Math.min(H - 6, (m / 3.2) * (H - 8)) - 2;
+        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+      const curX = ((simState.hour / 23) * W).toFixed(1);
+      const curY = pts[simState.hour].split(',')[1];
+      svg.innerHTML = `
+        <polyline fill="none" stroke="#007AFF" stroke-width="2.2" points="${pts.join(' ')}" />
+        <line x1="${curX}" y1="0" x2="${curX}" y2="${H}" stroke="#FF3B30" stroke-width="1" stroke-dasharray="2,2" />
+        <circle cx="${curX}" cy="${curY}" r="4" fill="#FF3B30" stroke="#fff" stroke-width="1.5" />
+      `;
+
+      // Commuter Event Alerts Feed
+      const evFeed = document.getElementById('commuter-events-feed');
+      evFeed.innerHTML = (transitData.scheduledEvents || []).map(ev => {
+        const stn = transitData.stations.find(s => s.id === ev.stationId);
+        return `
+          <div class="liquid-well rounded-xl p-2 flex items-center justify-between text-[11px]">
+            <div>
+              <div class="font-bold t-primary">${ev.name}</div>
+              <div class="text-[10px] t-muted">Near ${stn ? stn.shortName : ev.stationId} • ${ev.startHour}:00–${ev.endHour}:00 IST</div>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-[#AF52DE]/15 text-[#AF52DE] font-sf-mono text-[9px] font-bold">Avoid Peak</span>
+          </div>
+        `;
+      }).join('');
+
+      // Commuter Quick Station Pills
+      const pillsWrap = document.getElementById('commuter-station-pills');
+      pillsWrap.innerHTML = transitData.stations.map(s => `
+        <button data-stn="${s.id}" class="pub-pill-btn apple-btn px-2 py-1.5 rounded-xl text-[10px] font-semibold truncate ${
+          s.id === simState.selectedStationId ? 'bg-[#007AFF] text-white' : 'liquid-well t-secondary'
+        }">${s.shortName}</button>
+      `).join('');
+      document.querySelectorAll('.pub-pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          simState.selectedStationId = btn.dataset.stn;
+          const stn = transitData.stations.find(x => x.id === btn.dataset.stn);
+          if (stn) desiredLookTarget.set(stn.x, 2, stn.z);
+          calculateSimulation();
+        });
+      });
+    }
+
+    // --- 6. UPDATE 2D UMTA ADMIN CONSOLE UI ---
+    function updateAdminPortalUI(totalDemand, totalCapacity, crushHubs, totalBuses, avgSoC, globalMult) {
+      document.getElementById('adm-time-slider').value = simState.hour;
+      document.getElementById('adm-hour-label').innerText = `${simState.hour < 10 ? '0'+simState.hour : simState.hour}:00 IST`;
+
+      document.getElementById('adm-kpi-demand').innerText = `${totalDemand.toLocaleString()} pax/hr`;
+      const surgePct = Math.round((globalMult - 1) * 100);
+      document.getElementById('adm-kpi-surge').innerText = `${surgePct >= 0 ? '+' : ''}${surgePct}% vs Base`;
+      document.getElementById('adm-kpi-sdcl').innerText = `${crushHubs} / ${transitData.stations.length} Hubs`;
+      document.getElementById('adm-kpi-fleet').innerText = `${totalBuses} e-Buses`;
+      document.getElementById('adm-kpi-cap').innerText = `Cap: ${totalCapacity.toLocaleString()} pax/hr`;
+      document.getElementById('adm-kpi-soc').innerText = `${avgSoC}% Avg`;
+
+      // Populate 2D Station Dispatch Table
+      const tbody = document.getElementById('admin-stations-table-body');
+      tbody.innerHTML = transitData.stations.map(s => {
+        const strainPct = Math.round((s.strainRatio || 1) * 100);
+        const badgeClass = s.status === 'critical'
+          ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
+          : (s.status === 'event' ? 'bg-[#AF52DE]/15 text-[#AF52DE]' : (s.status === 'warning' ? 'bg-[#FF9500]/15 text-[#FF9500]' : 'bg-[#34C759]/15 text-[#34C759]'));
+        const statusLabel = s.status === 'critical' ? 'CRUSH LOAD' : (s.status === 'event' ? 'EVENT SURGE' : (s.status === 'warning' ? 'ELEVATED' : 'OPTIMAL'));
+
+        return `
+          <tr class="hover:bg-black/5 dark:hover:bg-white/5 transition">
+            <td class="py-2.5 px-3">
+              <div class="font-bold t-primary">${s.shortName}</div>
+              <div class="text-[10px] t-muted font-sf-mono">${s.id} • ${s.mode.toUpperCase()}</div>
+            </td>
+            <td class="py-2.5 px-2 font-sf-mono">
+              <div class="font-bold t-primary">${(s.currentPredictedDemand || 0).toLocaleString()}</div>
+              <div class="text-[10px] t-muted">Cap: ${s.capacity}</div>
+            </td>
+            <td class="py-2.5 px-2">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-sf-mono font-bold ${badgeClass}">
+                ${strainPct}% • ${statusLabel}
+              </span>
+            </td>
+            <td class="py-2.5 px-2 font-sf-mono font-bold ${s.status === 'critical' ? 'text-[#FF3B30]' : 't-primary'}">
+              ${s.waitMins} min
+            </td>
+            <td class="py-2.5 px-2">
+              <div class="flex items-center gap-1.5">
+                <button data-act="minus" data-id="${s.id}" class="adm-step-btn w-6 h-6 rounded-lg liquid-well font-bold text-xs flex items-center justify-center">−</button>
+                <span class="font-sf-mono font-bold w-6 text-center">${s.busesAssigned}</span>
+                <button data-act="plus" data-id="${s.id}" class="adm-step-btn w-6 h-6 rounded-lg bg-[#007AFF] text-white font-bold text-xs flex items-center justify-center">+</button>
+              </div>
+            </td>
+            <td class="py-2.5 px-2">
+              <div class="flex items-center gap-1">
+                <button data-act="auto" data-id="${s.id}" class="adm-step-btn px-2 py-1 rounded-lg bg-[#FF9500]/15 text-[#FF9500] font-sf-mono text-[10px] font-bold" title="Boost Share-Auto Feeders">
+                  Auto ${s.iptSync}%
+                </button>
+                <button data-act="charge" data-id="${s.id}" class="adm-step-btn px-2 py-1 rounded-lg bg-[#34C759]/15 text-[#34C759] font-sf-mono text-[10px] font-bold" title="Flash Charge Depot">
+                  ⚡${s.currentSoC}%
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.adm-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const stn = transitData.stations.find(x => x.id === btn.dataset.id);
+          if (!stn) return;
+          if (btn.dataset.act === 'minus' && stn.busesAssigned > 2) stn.busesAssigned--;
+          if (btn.dataset.act === 'plus' && stn.busesAssigned < 50) stn.busesAssigned++;
+          if (btn.dataset.act === 'auto') stn.iptSync = Math.min(100, stn.iptSync + 10);
+          if (btn.dataset.act === 'charge') stn.batterySoC = 100;
+          calculateSimulation();
+        });
+      });
+
+      // Corridor Infrastructure Strip
+      const corrStrip = document.getElementById('admin-corridor-strip');
+      corrStrip.innerHTML = transitData.corridors.slice(0, 6).map(c => {
+        const sA = transitData.stations.find(s => s.id === c.from);
+        const sB = transitData.stations.find(s => s.id === c.to);
+        const flooded = (simState.weather === 'monsoon' && c.lowLyingUnderpass && c.mode !== 'rail');
+        return `
+          <div class="px-2.5 py-1.5 rounded-lg liquid-glass flex items-center justify-between">
+            <span class="truncate font-medium t-primary">${sA ? sA.shortName : c.from} ↔ ${sB ? sB.shortName : c.to}</span>
+            <span class="font-sf-mono text-[10px] font-bold ${flooded ? 'text-[#FF3B30]' : 'text-[#34C759]'}">
+              ${flooded ? 'FLOODED' : 'OPEN'}
+            </span>
+          </div>
+        `;
+      }).join('');
+
+      // Admin Scheduled Events List
+      const admEvList = document.getElementById('admin-events-list');
+      admEvList.innerHTML = (transitData.scheduledEvents || []).map((ev, idx) => {
+        const stn = transitData.stations.find(s => s.id === ev.stationId);
+        return `
+          <div class="liquid-well rounded-xl p-2.5 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-bold t-primary">${ev.name}</div>
+              <div class="text-[10px] t-muted font-sf-mono">${stn ? stn.shortName : ev.stationId} • ${ev.startHour}:00–${ev.endHour}:00 IST (+${Math.round((ev.surgeMult-1)*100)}%)</div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button data-jump="${ev.startHour}" class="adm-jump-ev px-2 py-1 rounded bg-[#007AFF]/15 text-[#007AFF] text-[10px] font-bold">Sim</button>
+              <button data-del="${idx}" class="adm-del-ev px-2 py-1 rounded bg-[#FF3B30]/15 text-[#FF3B30] text-[10px] font-bold">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.adm-jump-ev').forEach(b => {
+        b.addEventListener('click', () => { simState.hour = parseInt(b.dataset.jump, 10); calculateSimulation(); });
+      });
+      document.querySelectorAll('.adm-del-ev').forEach(b => {
+        b.addEventListener('click', () => {
+          transitData.scheduledEvents.splice(parseInt(b.dataset.del, 10), 1);
+          calculateSimulation();
+        });
+      });
+    }
+
+    // --- 7. DROPDOWNS & EVENT LISTENERS ---
+    function populateDropdowns() {
+      const fromSel = document.getElementById('commuter-from-select');
+      const toSel = document.getElementById('commuter-to-select');
+      const admEvSel = document.getElementById('adm-ev-station');
+
+      const opts = transitData.stations.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      fromSel.innerHTML = opts;
+      toSel.innerHTML = opts;
+      admEvSel.innerHTML = opts;
+
+      fromSel.value = simState.commuterFromId;
+      toSel.value = simState.commuterToId;
+    }
+
+    document.getElementById('commuter-from-select').addEventListener('change', (e) => {
+      simState.commuterFromId = e.target.value;
+      simState.selectedStationId = e.target.value;
+      calculateSimulation();
+    });
+    document.getElementById('commuter-to-select').addEventListener('change', (e) => {
+      simState.commuterToId = e.target.value;
+      calculateSimulation();
+    });
+    document.getElementById('commuter-time-slider').addEventListener('input', (e) => {
+      simState.hour = parseInt(e.target.value, 10);
+      calculateSimulation();
+    });
+
+    // Admin Controls Listeners
+    document.getElementById('adm-time-slider').addEventListener('input', (e) => {
+      simState.hour = parseInt(e.target.value, 10);
+      calculateSimulation();
+    });
+    document.getElementById('adm-weather-select').addEventListener('change', (e) => {
+      simState.weather = e.target.value;
+      calculateSimulation();
+    });
+    document.getElementById('adm-encroach-slider').addEventListener('input', (e) => {
+      simState.laneEncroachment = parseInt(e.target.value, 10);
+      document.getElementById('adm-encroach-label').innerText = `${simState.laneEncroachment}%`;
+      calculateSimulation();
+    });
+    document.getElementById('adm-shakti-toggle').addEventListener('change', (e) => {
+      simState.shaktiSubsidy = e.target.checked;
+      calculateSimulation();
+    });
+    document.getElementById('adm-umta-toggle').addEventListener('change', (e) => {
+      simState.umtaSync = e.target.checked;
+      calculateSimulation();
+    });
+    document.getElementById('adm-reroute-toggle').addEventListener('change', (e) => {
+      simState.dynamicReroute = e.target.checked;
+      calculateSimulation();
+    });
+
+    document.querySelectorAll('.adm-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.preset;
+        if (p === 'silkboard') { simState.weather = 'clear'; simState.laneEncroachment = 75; simState.hour = 9; }
+        if (p === 'monsoon') { simState.weather = 'monsoon'; simState.laneEncroachment = 60; simState.hour = 18; }
+        if (p === 'festival') { simState.weather = 'clear'; simState.hour = 14; }
+        if (p === 'heatwave') { simState.weather = 'heatwave'; simState.hour = 15; }
+        document.getElementById('adm-weather-select').value = simState.weather;
+        document.getElementById('adm-encroach-slider').value = simState.laneEncroachment;
+        document.getElementById('adm-encroach-label').innerText = `${simState.laneEncroachment}%`;
+        calculateSimulation();
+      });
+    });
+
+    document.getElementById('btn-admin-rebalance').addEventListener('click', () => {
+      simState.umtaSync = true;
+      document.getElementById('adm-umta-toggle').checked = true;
+      simState.laneEncroachment = Math.max(10, simState.laneEncroachment - 25);
+      document.getElementById('adm-encroach-slider').value = simState.laneEncroachment;
+      document.getElementById('adm-encroach-label').innerText = `${simState.laneEncroachment}%`;
+
+      transitData.stations.forEach(s => {
+        s.iptSync = Math.max(s.iptSync, 95);
+        if (s.strainRatio > 0.90) {
+          const roadPenalty = (s.mode === 'brt' || s.mode === 'micro') ? (1 - simState.laneEncroachment * 0.004) : 1.0;
+          s.busesAssigned = Math.max(s.busesAssigned, Math.ceil((s.currentPredictedDemand * 1.12) / (120 * roadPenalty)));
+        }
+      });
+      calculateSimulation();
+      const toast = document.getElementById('adm-rebalance-toast');
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    });
+
+    document.getElementById('btn-adm-add-event').addEventListener('click', () => {
+      const name = document.getElementById('adm-ev-name').value.trim() || "Public Gathering Surge";
+      const stationId = document.getElementById('adm-ev-station').value;
+      const startHour = parseInt(document.getElementById('adm-ev-start').value, 10) || 16;
+      const endHour = parseInt(document.getElementById('adm-ev-end').value, 10) || 20;
+      const surgeMult = parseFloat(document.getElementById('adm-ev-surge').value) || 1.8;
+      const blockRoad = document.getElementById('adm-ev-block').checked;
+
+      transitData.scheduledEvents.push({ id: `EV_${Date.now()}`, name, stationId, startHour, endHour, surgeMult, blockRoad });
+      document.getElementById('adm-ev-name').value = '';
+      simState.hour = startHour;
+      calculateSimulation();
+    });
+
+    document.getElementById('btn-admin-reset').addEventListener('click', () => {
+      transitData = JSON.parse(JSON.stringify(DEFAULT_TRANSIT_DATA));
+      simState.weather = 'clear';
+      simState.laneEncroachment = 20;
+      simState.hour = 12;
+      calculateSimulation();
+    });
+
+    document.getElementById('btn-adm-export-csv').addEventListener('click', () => {
+      let csv = "stop_id,stop_name,mode,predicted_pax_hr,capacity_hr,assigned_ebuses,est_wait_mins,ipt_auto_sync_pct,battery_soc_pct\n";
+      transitData.stations.forEach(s => {
+        csv += `${s.id},"${s.name}",${s.mode},${s.currentPredictedDemand},${s.capacity},${s.busesAssigned},${s.waitMins},${s.iptSync},${s.currentSoC}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'umta_admin_dispatch_report.csv';
+      a.click();
+    });
+
+    // Theme Switcher
+    document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+      simState.theme = simState.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', simState.theme);
+      document.getElementById('theme-label').innerText = simState.theme === 'light' ? 'Daylight' : 'Obsidian';
+      scene.fog.color.setHex(simState.theme === 'light' ? 0xE8EEF7 : 0x070A14);
+      groundMat.color.setHex(simState.theme === 'light' ? 0xE9EEF6 : 0x090D1A);
+    });
+
+    // Camera Presets for Commuter 3D View
+    document.querySelectorAll('.cam-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.cam === 'iso') { targetSpherical.radius = 68; targetSpherical.phi = Math.PI / 3.2; }
+        if (btn.dataset.cam === 'top') { targetSpherical.radius = 82; targetSpherical.phi = 0.2; }
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- 8. 60FPS ANIMATION LOOP (RUNS 3D PROJECTION WHEN COMMUTER VIEW IS ACTIVE) ---
+    const projVec = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (simState.activePortal !== 'commuter') return;
+
+      if (!isDragging) targetSpherical.theta += 0.001;
+
+      camSpherical.radius += (targetSpherical.radius - camSpherical.radius) * 0.08;
+      camSpherical.phi += (targetSpherical.phi - camSpherical.phi) * 0.08;
+      camSpherical.theta += (targetSpherical.theta - camSpherical.theta) * 0.08;
+      lookTarget.lerp(desiredLookTarget, 0.08);
+
+      camera.position.x = lookTarget.x + camSpherical.radius * Math.sin(camSpherical.phi) * Math.sin(camSpherical.theta);
+      camera.position.y = lookTarget.y + camSpherical.radius * Math.cos(camSpherical.phi);
+      camera.position.z = lookTarget.z + camSpherical.radius * Math.sin(camSpherical.phi) * Math.cos(camSpherical.theta);
+      camera.lookAt(lookTarget);
+
+      stationMeshes.forEach(item => {
+        item.currentHeight += (item.targetHeight - item.currentHeight) * 0.12;
+        item.currentColor.lerp(item.targetColor, 0.12);
+        item.outerMesh.scale.y = item.currentHeight;
+        item.coreMesh.scale.y = item.currentHeight;
+        item.outerMesh.material.color.copy(item.currentColor);
+        item.outerMesh.material.emissive.copy(item.currentColor);
+        item.groundRing.material.color.copy(item.currentColor);
+
+        projVec.set(item.stn.x, item.currentHeight + 1.6, item.stn.z);
+        projVec.project(camera);
+        if (projVec.z < 1) {
+          const x = (projVec.x * 0.5 + 0.5) * window.innerWidth;
+          const y = (-(projVec.y * 0.5) + 0.5) * window.innerHeight;
+          item.labelEl.style.transform = `translate(-50%, -100%) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+          item.labelEl.style.opacity = '1';
+        } else {
+          item.labelEl.style.opacity = '0';
+        }
+      });
+
+      activeParticles.forEach(p => {
+        p.progress += p.speed;
+        if (p.progress > 1) p.progress = 0;
+        p.mesh.position.copy(p.curve.getPoint(p.progress));
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    window.onload = function () {
+      lucide.createIcons();
+      build3DScene();
+      calculateSimulation();
+      animate();
+    };
+  </script>
+</body>
+</html>
